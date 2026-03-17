@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Usage:
-#   bash eval/eval.sh          — dev set (for experimentation)
-#   bash eval/eval.sh --test   — FULL test set (for submission only)
+#   bash eval/eval.sh              — train set (for experimentation)
+#   bash eval/eval.sh --test       — test set (for submission only)
 #   bash eval/eval.sh --ids 0,3,5  — specific indices (for debugging)
 set -euo pipefail
 
-DATA="data/dev.jsonl"
+DATA="data/train.jsonl"
 IDS=""
 while [ $# -gt 0 ]; do
     case "$1" in
