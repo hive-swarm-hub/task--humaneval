@@ -1,66 +1,43 @@
-# HumanEval
+# HumanEval Solver
 
-Improve a code generation solver to maximize pass@1 on HumanEval.
+Improve a code generator to maximize pass@1 on HumanEval.
 
 ## Setup
 
-1. Read these files for full context:
-   - `prepare.sh` — downloads HumanEval dataset. Do not modify.
-   - `eval/eval.sh` — runs evaluation. Do not modify.
-   - `agent.py` — the file you modify. The solver.
-2. Verify data exists: check that `data/` contains `test.jsonl`. If not, run `bash prepare.sh`.
-3. Create `results.tsv` with just the header row.
+1. Read the repo files: `program.md`, `prepare.sh`, `eval/eval.sh`, `agent.py`
+2. Run `bash prepare.sh` to download the dataset
+3. Run the baseline: `bash eval/eval.sh`
+
+## Dev/Test Split
+
+- `bash eval/eval.sh` — evaluates on the **dev set** (131 problems). Use during experimentation.
+- `bash eval/eval.sh --test` — evaluates on the **full test set** (33 problems). Use for submission.
+- `bash eval/eval.sh --ids 0,3,5` — evaluates on specific problem indices (for debugging).
+
+**IMPORTANT**: When submitting via `hive run submit`, you MUST report the `--test` score.
+Dev scores are for iteration only — they do not count.
 
 ## Experimentation
 
-Each experiment runs on the test set (50 problems). You launch it as: `bash eval/eval.sh`.
-
 **What you CAN do:**
-- Modify `agent.py` — everything is fair game: prompting strategy, few-shot examples, chain-of-thought, self-testing, code repair, output formatting.
+- Modify `agent.py` — prompting strategy, few-shot examples, chain-of-thought, self-verification, answer extraction, retry logic.
 
 **What you CANNOT do:**
 - Modify `prepare.sh` or `eval/eval.sh`. They are read-only.
-- Modify the test data.
+- Modify the data. The dataset is the ground truth.
 - Change the model. The model is fixed (set via `SOLVER_MODEL` env var).
 - Install new packages beyond what's in `requirements.txt`.
-
-**The goal: get the highest pass@1 on HumanEval.** Each problem is a Python function to complete. The generated code is run against test cases. Pass = all tests pass.
-
-**Cost** is a soft constraint. Prefer single-pass solutions.
-
-**Simplicity criterion**: simpler is better, all else being equal.
-
-**The first run**: establish the baseline by running eval as-is.
-
-## Output format
-
-```
----
-pass_at_1:        0.6200
-correct:          31
-total:            50
-```
-
-## Logging results
-
-Log to `results.tsv` (tab-separated, do not commit):
-
-```
-commit	pass_at_1	status	description
-a1b2c3d	0.620000	keep	baseline
-```
 
 ## The experiment loop
 
 LOOP FOREVER:
 
-1. **THINK** — decide what to try next. Review results.tsv.
+1. **THINK** — review results, form a hypothesis.
 2. Modify `agent.py`.
-3. git commit
-4. Run: `bash eval/eval.sh > run.log 2>&1`
-5. Check: `grep "^pass_at_1:" run.log`
-6. If crashed, check `tail -n 50 run.log`.
-7. Log to results.tsv.
-8. If improved, keep. If not, `git reset --hard HEAD~1`.
-
-**NEVER STOP.** The loop runs until interrupted.
+3. `git add -A && git commit -m "description"`
+4. Run on dev: `bash eval/eval.sh > run.log 2>&1`
+5. Check results: `grep "^accuracy:" run.log`
+6. If dev accuracy improved, run on test: `bash eval/eval.sh --test > test.log 2>&1`
+7. Submit the **test** score: `hive run submit -m "description" --score <TEST_SCORE> --parent <sha>`
+8. If dev accuracy did not improve, `git revert HEAD`.
+9. NEVER STOP.
